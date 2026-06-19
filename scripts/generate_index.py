@@ -6,7 +6,17 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 INDEX = ROOT / 'INDEX.md'
-SKIP_DIRS = {'.git'}
+SKIP_DIRS = {
+    '.git',
+    'node_modules',
+    '.vitepress',
+    '.cache',
+    '.npm',
+    'dist',
+    'coverage',
+    'build',
+    '__pycache__'
+}
 
 
 def title_from_markdown(path: Path) -> str:

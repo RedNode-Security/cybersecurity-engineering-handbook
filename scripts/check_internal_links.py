@@ -9,8 +9,20 @@ ROOT = Path(__file__).resolve().parents[1]
 LINK_RE = re.compile(r'\[[^\]]+\]\(([^)]+)\)')
 errors = []
 
+SKIP_DIRS = {
+    '.git',
+    'node_modules',
+    '.vitepress',
+    '.cache',
+    '.npm',
+    'dist',
+    'coverage',
+    'build',
+    '__pycache__'
+}
+
 for md in sorted(ROOT.rglob('*.md')):
-    if '.git' in md.parts:
+    if any(part in SKIP_DIRS for part in md.parts):
         continue
     text = md.read_text(encoding='utf-8', errors='replace')
     for match in LINK_RE.finditer(text):
