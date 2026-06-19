@@ -2,21 +2,18 @@
 """Generate INDEX.md from repository markdown files."""
 from pathlib import Path
 import argparse
-import sys
+
+try:
+    from repo_paths import is_generated_markdown, should_skip_path
+except ImportError:  # pragma: no cover - fallback for unusual execution contexts
+    def should_skip_path(path) -> bool:
+        return any(part in {'.git', 'node_modules', '.vitepress', '.cache', '.npm', 'dist', 'coverage', 'build', '__pycache__'} for part in path.parts)
+
+    def is_generated_markdown(path) -> bool:
+        return path.name.endswith('.generated.md')
 
 ROOT = Path(__file__).resolve().parents[1]
 INDEX = ROOT / 'INDEX.md'
-SKIP_DIRS = {
-    '.git',
-    'node_modules',
-    '.vitepress',
-    '.cache',
-    '.npm',
-    'dist',
-    'coverage',
-    'build',
-    '__pycache__'
-}
 
 
 def title_from_markdown(path: Path) -> str:
@@ -30,9 +27,11 @@ def build_index() -> str:
     files = []
     for path in ROOT.rglob('*.md'):
         rel = path.relative_to(ROOT)
-        if any(part in SKIP_DIRS for part in rel.parts):
+        if should_skip_path(rel):
             continue
         if rel.name == 'INDEX.md':
+            continue
+        if is_generated_markdown(rel):
             continue
         files.append(rel)
 
@@ -72,6 +71,7 @@ def main() -> int:
     INDEX.write_text(content, encoding='utf-8')
     print(f'Wrote {INDEX.relative_to(ROOT)}')
     return 0
+
 
 if __name__ == '__main__':
     raise SystemExit(main())

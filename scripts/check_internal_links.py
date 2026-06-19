@@ -5,24 +5,19 @@ import re
 import sys
 from urllib.parse import unquote
 
+try:
+    from repo_paths import should_skip_path
+except ImportError:  # pragma: no cover
+    def should_skip_path(path) -> bool:
+        return any(part in {'.git', 'node_modules', '.vitepress', '.cache', '.npm', 'dist', 'coverage', 'build', '__pycache__'} for part in path.parts)
+
 ROOT = Path(__file__).resolve().parents[1]
 LINK_RE = re.compile(r'\[[^\]]+\]\(([^)]+)\)')
 errors = []
 
-SKIP_DIRS = {
-    '.git',
-    'node_modules',
-    '.vitepress',
-    '.cache',
-    '.npm',
-    'dist',
-    'coverage',
-    'build',
-    '__pycache__'
-}
-
 for md in sorted(ROOT.rglob('*.md')):
-    if any(part in SKIP_DIRS for part in md.parts):
+    rel_md = md.relative_to(ROOT)
+    if should_skip_path(rel_md):
         continue
     text = md.read_text(encoding='utf-8', errors='replace')
     for match in LINK_RE.finditer(text):
@@ -38,10 +33,10 @@ for md in sorted(ROOT.rglob('*.md')):
         try:
             candidate.relative_to(ROOT)
         except ValueError:
-            errors.append(f'{md.relative_to(ROOT)}: link escapes repo: {target}')
+            errors.append(f'{rel_md}: link escapes repo: {target}')
             continue
         if not candidate.exists():
-            errors.append(f'{md.relative_to(ROOT)}: missing link target: {target}')
+            errors.append(f'{rel_md}: missing link target: {target}')
 
 if errors:
     print('Internal link check failed:')

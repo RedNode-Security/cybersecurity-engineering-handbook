@@ -11,15 +11,27 @@ from pathlib import Path
 import json
 import sys
 
+try:
+    from repo_paths import is_generated_markdown, should_skip_path
+except ImportError:  # pragma: no cover
+    def should_skip_path(path) -> bool:
+        return any(part in {'.git', 'node_modules', '.vitepress', '.cache', '.npm', 'dist', 'coverage', 'build', '__pycache__'} for part in path.parts)
+
+    def is_generated_markdown(path) -> bool:
+        return path.name.endswith('.generated.md')
+
 ROOT = Path(__file__).resolve().parents[1]
-SKIP_PARTS = {'.git'}
 REQUIRED_IOC_FIELDS = {'report_id', 'tlp', 'source', 'confidence', 'created', 'indicators'}
 TOP_LEVEL_MD_WITHOUT_FRONTMATTER = {
     'README.md', 'ROADMAP.md', 'CONTRIBUTING.md', 'SECURITY.md', 'LICENSE-OPTIONS.md',
     'LICENSE.md', 'LICENSE-DOCS.md', 'LICENSE-CODE.md', 'NOTICE.md',
-    'INDEX.md', 'BACKLOG.md', 'PROJECT_STATUS.md', 'PUBLISHING.md', 'REFERENCE_GRADE_ROADMAP.md', 'VERSIONING.md', 'SUPER_DEEP_DIVE_STATUS.md', 'COVERAGE_MATRIX.md', 'SUPER_DEEP_DIVE_ROADMAP.md', 'CHANGELOG.md', 'REVIEW_STATUS.md', 'PUBLISHED_INDEX.md'
+    'INDEX.md', 'BACKLOG.md', 'PROJECT_STATUS.md', 'PUBLISHING.md', 'REFERENCE_GRADE_ROADMAP.md',
+    'VERSIONING.md', 'SUPER_DEEP_DIVE_STATUS.md', 'COVERAGE_MATRIX.md', 'SUPER_DEEP_DIVE_ROADMAP.md',
+    'CHANGELOG.md', 'REVIEW_STATUS.md', 'PUBLISHED_INDEX.md', 'SERIOUS_DETECTION_LIBRARY_STATUS.md',
+    'DETECTION_REFERENCE_LIBRARY.md', 'VITEPRESS.md'
 }
 TEMPLATE_DIRS = {'99-Templates', '_meta'}
+SITE_MIRROR_DIRS = {'docs'}
 
 errors = []
 
@@ -27,7 +39,9 @@ for path in ROOT.rglob('*'):
     if not path.is_file():
         continue
     rel = path.relative_to(ROOT)
-    if any(part in SKIP_PARTS for part in rel.parts):
+    if should_skip_path(rel):
+        continue
+    if is_generated_markdown(rel):
         continue
 
     if path.suffix.lower() == '.md':
@@ -38,6 +52,7 @@ for path in ROOT.rglob('*'):
         needs_frontmatter = (
             rel.name not in TOP_LEVEL_MD_WITHOUT_FRONTMATTER
             and rel.parts[0] not in TEMPLATE_DIRS
+            and rel.parts[0] not in SITE_MIRROR_DIRS
             and rel.name != 'README.md'
         )
         if needs_frontmatter and not text.startswith('---\n'):
